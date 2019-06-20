@@ -2,16 +2,10 @@
 from pg import DB
 import socket
 import re
+import datetime
+import time
 # Connexion à la database
 db= DB(dbname='conn', host='localhost', port=5432, user='pguser', passwd='Azerty1')
-
-# def envoi(ip, port):
-#         global socket
-#         port = port
-#         socket.connect((ip, port))
-#         socket.send(b"clem:mdp")
-#         socket.close()
-    
 
 def insert(nom,mdp,mail):
 
@@ -38,27 +32,38 @@ socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket.bind(('', 55000))
 socket.listen(200)
 client, address = socket.accept()
-while True:
-        response= client.recv(2048).decode()
-        rep=response.split(':')
-        nom=rep[0]
-        mdp=rep[1]
-        if (len(rep)) == 3:
-                mail=rep[2]
-                patternMail="^\w+@\w+..{2,3}(.{2,3})?$"
-                if not re.match(patternMail, mail):
-                       client.send(b"Format du mail incorrect")
-                else :
-                    insert(nom,mdp,mail)
-                    nom=nom.encode()
-                    client.send(nom +b":True")
 
-        elif verif(nom,mdp) == True:
-                nom=nom.encode()
-                client.send(nom +b":True")
-        else:
-                nom=nom.encode()
-                client.send(nom+b":False")
+while True:
+        #Ouverture du fichier de logs
+        day = datetime.datetime.now()
+        with open("logs.txt", "a") as file:
+                response= client.recv(2048).decode()
+                rep=response.split(':')
+                try:
+                        nom=rep[0]
+                        mdp=rep[1]
+                except:
+                        client.send(b"Le format ou le nombre d'arguments n'est pas bon")
+                        file.write("Mauvais nombre d'arguments   le : " + day.strftime("%b %d %Y %H:%M:%S") + "\n")
+                        if (len(rep)) == 3:
+                                mail=rep[2]
+                                patternMail="^\w+@\w+..{2,3}(.{2,3})?$"
+                                if not re.match(patternMail, mail):
+                                        client.send(b"Format du mail incorrect")
+                                        file.write("format de mail incorrect pour  " + mail +"  le : " + day.strftime("%b %d %Y %H:%M:%S") + "\n")
+                                else :
+                                        insert(nom,mdp,mail)
+                                        file.write("Création du compte " + nom +"  le : " + day.strftime("%b %d %Y %H:%M:%S") + "\n")
+                                        nom=nom.encode()
+                                        client.send(nom +b":True")
+                        elif verif(nom,mdp) == True:
+                                file.write("Verification du compte " + nom +"  le : " + day.strftime("%b %d %Y %H:%M:%S") + "\n") 
+                                nom=nom.encode()
+                                client.send(nom +b":True")
+                        else:
+                                file.write("Verification NOK du compte  "+ nom + " le : " + day.strftime("%b %d %Y %H:%M:%S") + "\n")
+                                nom=nom.encode()
+                                client.send(nom+b":False")
                 
 
 
